@@ -3,11 +3,13 @@
 #include <nana/gui/widgets/button.hpp>
 #include <nana/gui/widgets/listbox.hpp>
 #include <nana/gui/widgets/textbox.hpp>
+#include <nana/gui/widgets/checkbox.hpp>
 #include <string>
+#include <vector>
+#include <mutex>
 
 int add(int, int);
 
-using namespace nana;
 using namespace nana;
 
 //Creates a textbox and button
@@ -81,6 +83,8 @@ private:
 
 		rectangle r(sz.width + 5, 0, 45, sz.height);
 		btn_.move(r);
+		//rectangle t(sz.width, 5, 100, sz.height);
+		//chb_.move(t);
 	}
 
 	//Sets the value of inline widget with the value of the sub item
@@ -105,9 +109,50 @@ private:
 };
 
 int main() {
+	struct data {
+		char* username;
+		char* password;
+	};
+	std::vector<data> datas;
 
 	////Define a form.
 	form fm;
+	fm.caption("Password Manager");
+
+
+	auto value_translator = [](const std::vector<nana::listbox::cell>& cells) {
+		data p;
+		char * u = (char*)malloc(cells[0].text.size());
+		int u_len = cells[0].text.size();
+		auto sou = cells[0].text.c_str();
+		__asm {
+			mov ecx, u_len
+			lea esi, u
+			lea edi, sou
+			rep movsb 
+		}
+		char * ps = (char*)malloc(cells[1].text.size());
+		//u = (char*)malloc(cells[1].text.size());
+		u_len = cells[1].text.size();
+		sou = cells[1].text.c_str();
+		__asm {
+			mov ecx, u_len
+			lea esi, ps
+			lea edi, sou
+			rep movsb
+
+		}
+		p.username = u;
+		p.password = ps;//std::stoul(cells[1].text);
+		return p;
+	};
+
+	auto cell_translator = [](const data& p) {
+		std::vector<nana::listbox::cell> cells;
+		cells.emplace_back(p.username);
+		cells.emplace_back(p.password);
+		return cells;
+	};
 
 	////Define a label and display a text.
 	//label lab{ fm, "Hello, <bold blue size=16>Nana C++ Library</>" };
@@ -133,11 +178,19 @@ int main() {
 	//lab.caption(std::string("Ali"));
 	//fm.show();
 	//form fm;
-	listbox lsbox(fm, rectangle{ 10, 10, 300, 200 });
+	listbox lsbox(fm, rectangle{ 0, 0, 500, 400 });
 
 	//Create two columns
-	lsbox.append_header("column 0");
-	lsbox.append_header("column 1");
+	lsbox.checkable(1);
+	lsbox.append_header("Username");
+	lsbox.append_header("Password");
+	//lsbox.events.checked([](listbox & lsbox) {
+	//	auto a = lsbox.at(0);
+	//	for (auto & n: a) {
+	//		//n.text()
+	//	}
+	//}(lsbox));
+
 
 	//Then append items
 	lsbox.at(0).append({ "Hello0", "World0" });
@@ -167,3 +220,4 @@ int add(int, int) {
 		add   eax, [esp + 8]; argument 2
 	}
 }
+
