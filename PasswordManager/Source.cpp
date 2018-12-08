@@ -108,17 +108,22 @@ private:
 	button btn_;
 };
 
+struct data {
+	char* username;
+	char* password;
+};
 int main() {
-	struct data {
-		char* username;
-		char* password;
-	};
 	std::vector<data> datas;
 
 	////Define a form.
 	form fm;
 	fm.caption("Password Manager");
 
+	//Then append items
+	datas.push_back(data{ (char *)"Hello0", (char *)"World0" });
+	datas.push_back(data{ (char *)"Hello1", (char *)"World1" });
+	datas.push_back(data{ (char *)"Hello2", (char *)"World2" });
+	datas.push_back(data{ (char *)"Hello3", (char *)"World3" });
 
 	auto value_translator = [](const std::vector<nana::listbox::cell>& cells) {
 		data p;
@@ -184,6 +189,7 @@ int main() {
 	lsbox.checkable(1);
 	lsbox.append_header("Username");
 	lsbox.append_header("Password");
+	lsbox.at(0).model<std::recursive_mutex>(datas, value_translator, cell_translator);
 	//lsbox.events.checked([](listbox & lsbox) {
 	//	auto a = lsbox.at(0);
 	//	for (auto & n: a) {
@@ -192,11 +198,6 @@ int main() {
 	//}(lsbox));
 
 
-	//Then append items
-	lsbox.at(0).append({ "Hello0", "World0" });
-	lsbox.at(0).append({ "Hello1", "World1" });
-	lsbox.at(0).append({ "Hello2", "World2" });
-	lsbox.at(0).append({ "Hello3", "World3" });
 
 
 	//Set the inline_widget, the first column of category 0, the second column of category 1
