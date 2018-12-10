@@ -28,17 +28,13 @@ std::string encrypt(std::string z) {
 	}
 	__asm {
 		mov ecx, a;
-		inc ecx
 		mov esi, tmp;
 		mov edi, tmp;
 	encrypt_loop:
 		lodsb;
-		cmp al, 0;
-		je encrypt_end
 		add al, key;
 		stosb;
 		loop encrypt_loop;
-	encrypt_end:
 	}
 	return std::string(tmp);
 }
@@ -58,17 +54,13 @@ std::string decrypt(std::string z) {
 	}
 	__asm {
 		mov ecx, a;
-		inc ecx
 		mov esi, tmp;
 		mov edi, tmp;
 	decrypt_loop:
 		lodsb;
-		cmp al, 0;
-		je decrypt_end
 		sub al, key;
 		stosb;
 		loop decrypt_loop;
-	decrypt_end:
 	}
 	return std::string(tmp);
 }
@@ -258,15 +250,16 @@ private:
 	virtual void set(const value_type& value) {
 		//Avoid emitting text_changed to set caption again, otherwise it
 		//causes infinite recursion.
-		if (txt_.caption() != value){
-			if(!this->btn_.checked()){
+		if (txt_.caption() != value) {
+			if (!en_first) {
 				txt_.caption(encrypt(value));
+				en_first = true;
 				txt_.editable(0);
-			};
-			if (this->btn_.checked()) {
+			} else {
 				txt_.caption(value);
 			}
 		}
+			
 	}
 
 	//Determines whether to draw the value of sub item
@@ -280,6 +273,7 @@ public:
 	index_type pos_;
 	textbox txt_;
 	checkbox btn_;
+	bool en_first = false;
 };
 
 struct data {
