@@ -9,7 +9,7 @@
 #include <mutex>
 #include <iostream>
 
-static char key = 8;
+static int keypass = 8;
 
 int add(int, int);
 std::string encrypt(std::string z) {
@@ -27,12 +27,13 @@ std::string encrypt(std::string z) {
 		loop copy_loop
 	}
 	__asm {
+		movzx ebx, keypass;
 		mov ecx, a;
 		mov esi, tmp;
 		mov edi, tmp;
 	encrypt_loop:
 		lodsb;
-		add al, key;
+		add al, bl;
 		stosb;
 		loop encrypt_loop;
 	}
@@ -53,12 +54,13 @@ std::string decrypt(std::string z) {
 		loop copy_loop
 	}
 	__asm {
+		movzx ebx, keypass;
 		mov ecx, a;
 		mov esi, tmp;
 		mov edi, tmp;
 	decrypt_loop:
 		lodsb;
-		sub al, key;
+		sub al, bl;
 		stosb;
 		loop decrypt_loop;
 	}
@@ -216,6 +218,7 @@ private:
 			//Highlight the item when hovers the button
 			indicator_->hovered(pos_);
 		});
+		checkboxes.push_back(&btn_);
 	}
 
 	//Activates the inline widget, bound to a certain item of the listbox
@@ -274,7 +277,9 @@ public:
 	textbox txt_;
 	checkbox btn_;
 	bool en_first = false;
+	static std::vector<checkbox *> checkboxes;
 };
+std::vector<checkbox *> inline_widget2::checkboxes = *new std::vector<checkbox *>();
 
 struct data {
 	std::basic_string<char> username;
@@ -283,6 +288,40 @@ struct data {
 
 int main() {
 	std::vector<data> datas;
+	form init;
+	init.events().expose([&] {
+		inputbox::text pass("Passkey");
+		inputbox passkey(init, "Please enter a number as your key", "Set pass key");
+		passkey.verify([&pass](nana::window handle) {
+			if (pass.value().empty()) {
+				msgbox mb(handle, "Invalid Input");
+				mb << L"Passkey is required";
+				mb.show();
+				return false;
+			}
+			for (char a : pass.value()) {
+				if (a < '0' || a > '9') {
+					msgbox mb(handle, "Invalid Input");
+					mb << L"Passkey must contain integer only";
+					mb.show();
+					return false;
+				}
+			}
+			return true;
+		});
+
+		if (passkey.show(pass)) {
+			keypass = std::stoi(pass.value()) % 7 + 1;
+		} else {
+			msgbox mb(init, "Invalid Input");
+			mb << L"Cannot continue without passkey";
+			mb.show();
+			init.close();
+			std::exit(1);
+		}
+		init.close();
+	});
+	init.show();
 
 	////Define a form.
 	form fm;
@@ -361,6 +400,7 @@ int main() {
 	button load{ fm, "load" };
 	button key{ fm, "set key" };
 	button save{ fm, "save" };
+
 	add.events().click([&] {//&fm,&datas,&lsbox
 		lsbox.at(0).append({ "Who", "10000" });
 		lsbox.at(0).back().check(1);
@@ -371,6 +411,39 @@ int main() {
 		//fm.close();
 	});
 
+	key.events().click([&] {
+		inputbox::text pass("Passkey");
+		inputbox passkey(fm, "Please enter a number as your key", "Set pass key");
+		passkey.verify([&pass](nana::window handle) {;
+			for (auto i : inline_widget2::checkboxes) {
+				if (!i->checked()) {
+					msgbox mb(handle, "Error");
+					mb << L"All boxes must be unlocked before modifing passkey";
+					mb.show();
+					return false;
+				}
+			}
+			if (pass.value().empty()) {
+				msgbox mb(handle, "Invalid Input");
+				mb << L"Passkey is required";
+				mb.show();
+				return false;
+			}
+			for (char a : pass.value()) {
+				if (a < '0' || a > '9') {
+					msgbox mb(handle, "Invalid Input");
+					mb << L"Passkey must contain integer only";
+					mb.show();
+					return false;
+				}
+			}
+			return true;
+		});
+
+		if (passkey.show(pass)) {
+			keypass = std::stoi(pass.value()) % 7 + 1;
+		}
+	});
 
 
 
@@ -390,6 +463,7 @@ int main() {
 
 	fm.show();
 	nana::exec();
+	return 0;
 }
 
 int add(int, int) {
