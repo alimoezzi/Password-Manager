@@ -402,9 +402,37 @@ int main() {
 	button save{ fm, "save" };
 
 	add.events().click([&] {//&fm,&datas,&lsbox
-		lsbox.at(0).append({ "Who", "10000" });
+		std::string username;
+		std::string password;
+		inputbox::text user("Username");
+		inputbox::text newkey("Password");
+		inputbox passkey(fm, "Enter your new username and Password ", "New Entry");
+		passkey.verify([&newkey](nana::window handle) {;
+		if (newkey.value().empty()) {
+			msgbox mb(handle, "Invalid Input");
+			mb << L"Passkey is required";
+			mb.show();
+			return false;
+		}
+		return true;
+		});
+		passkey.verify([&user](nana::window handle) {;
+		if (user.value().empty()) {
+			msgbox mb(handle, "Invalid Input");
+			mb << L"Passkey is required";
+			mb.show();
+			return false;
+		}
+		return true;
+		});
+
+		if (passkey.show(user, newkey)) {
+			username = user.value();
+			password = newkey.value();
+		}
+		lsbox.at(0).append({ username,password});
 		lsbox.at(0).back().check(1);
-		auto mdg = lsbox.at(0).model();
+		//auto mdg = lsbox.at(0).model();
 		//datas.push_back(data{ "Who", "10000" });
 		//std::cout<<datas.size();
 		nana::API::refresh_window(lsbox);
