@@ -8,8 +8,11 @@
 #include <vector>
 #include <mutex>
 #include <iostream>
+#include <Windows.h>
+#include <sstream>
 
 static int keypass = 8;
+
 
 int add(int, int);
 std::string encrypt(std::string z) {
@@ -288,12 +291,20 @@ struct data {
 
 int main() {
 	std::vector<data> datas;
+	std::string fname;
 	form init;
 	init.events().expose([&] {
 		inputbox::text pass("Passkey");
-		inputbox passkey(init, "Please enter a number as your key", "Set pass key");
-		passkey.verify([&pass](nana::window handle) {
+		inputbox::text fn("Filename");
+		inputbox passkey(init, "Please enter a number as your key and your filename", "Pass key and Filename");
+		passkey.verify([&pass,&fn](nana::window handle) {
 			if (pass.value().empty()) {
+				msgbox mb(handle, "Invalid Input");
+				mb << L"Passkey is required";
+				mb.show();
+				return false;
+			}
+			if (fn.value().empty()) {
 				msgbox mb(handle, "Invalid Input");
 				mb << L"Passkey is required";
 				mb.show();
@@ -310,8 +321,88 @@ int main() {
 			return true;
 		});
 
-		if (passkey.show(pass)) {
+		if (passkey.show(pass,fn)) {
 			keypass = std::stoi(pass.value()) % 7 + 1;
+			fname = fn.value();
+			char * lpFileName = (char*)fname.c_str();
+			char * lpReOpenBuff = (char*)malloc(200 * sizeof(char));
+			char * fileio_buffer = (char*)malloc(100000 * sizeof(char));
+			int fSize = 0;
+			int ifExist = 0;
+			__asm {
+				push 0x00004000;/* ustyle Use this to test for the existence of a file*/
+				push lpReOpenBuff
+				push lpFileName
+				call OpenFile
+				pushad
+				call GetLastError
+				cmp eax, 0; file already exist
+				je filer_exist_handle
+				cmp eax, 2
+				je filer_not_found_handle
+			filer_exist_handle :
+				popad;
+				xor eax, eax
+				push eax; 7 param - Handle
+				push 128; 6 param - /*FILE_ATTRIBUTE_NORMAL*/
+				push 4; 5 param - /*OPEN_ALWAYS*/
+				push eax; 4 param - Default security
+				push 0x00000002; 3 param - share write
+				push 0x10000000; 2 param - Generic All access
+				push lpFileName; 1 param - FileName
+				call CreateFileA;
+
+				pushad;
+				push 0; lpFileSizeHigh
+				push eax;
+				call GetFileSize;
+				mov fSize, eax;
+				inc ifExist;
+				popad;
+				pushad
+
+				push 0; LPOVERLAPPED
+				push 0; /*NULL if */an asynchronous operation
+				push 1024; maximum number of bytes to be read
+				push fileio_buffer; buffer that receives the data
+				push eax; hfile
+				call ReadFile;
+				popad
+				push eax
+				call CloseHandle;
+				jmp _there;
+			filer_not_found_handle:
+				popad;
+				xor eax, eax;
+				push eax; 7 param - Handle
+				push 128; 6 param - /*FILE_ATTRIBUTE_NORMAL*/
+				push 2; 5 param - /*CREATE_ALWAYS*/
+				push eax; 4 param - Default security
+				push 0x00000002; 3 param - share write
+				push 0x10000000; 2 param - Generic All access
+				push lpFileName; 1 param - FileName
+				call CreateFileA;
+				push eax
+				call CloseHandle;
+			_there:
+			}
+
+			if (ifExist) {
+				//char* realbuf = (char*)malloc(fSize * sizeof(char));
+				std::stringstream tmp(fileio_buffer);
+				int length;
+				tmp >> length;
+				for (int i = 0; i < length/2; i++) {
+					std::string u;
+					std::string p;
+					char x, y;
+
+					std::getline(tmp, u, (char)7);
+					std::getline(tmp, p, (char)7);
+					datas.push_back({ u,decrypt(p) });
+				}
+			}
+
 		} else {
 			msgbox mb(init, "Invalid Input");
 			mb << L"Cannot continue without passkey";
@@ -328,11 +419,11 @@ int main() {
 	fm.caption("Password Manager");
 
 	//Then append items
-	datas.push_back(data{ "Hello0", "World0" });
-	datas.push_back(data{ "Hello1", "World1" });
-	datas.push_back(data{ "Hello2", "World2" });
-	datas.push_back(data{ "Hello3", "World3" });
-	datas.push_back(data{ "Hello3", "World3" });
+	//datas.push_back(data{ "Hello0", "World0" });
+	//datas.push_back(data{ "Hello1", "World1" });
+	//datas.push_back(data{ "Hello2", "World2" });
+	//datas.push_back(data{ "Hello3", "World3" });
+	//datas.push_back(data{ "Hello3", "World3" });
 
 
 
@@ -401,22 +492,67 @@ int main() {
 	button key{ fm, "set key" };
 	button save{ fm, "save" };
 
+	save.events().click([&] {
+		for (auto i : inline_widget2::checkboxes) {
+			if (i->checked()) {
+				msgbox mb(fm, "Error");
+				mb << L"All boxes must be locked before saving";
+				mb.show();
+				return false;
+			}
+		}
+		char * lpFileName = (char*)fname.c_str();
+		char * aaa = new char[datas.size() * 100];
+		std::stringstream tmp;
+		tmp << (int)datas.size() * 2;
+		char c = 7;
+		for (auto a : datas) tmp << a.username << c << a.password.c_str() << c;
+		auto writeBuffer = tmp.str();
+		int dataSize = tmp.str().size() * sizeof(char);
+		for (int i = 0; i < dataSize; i++) {
+			aaa[i] = writeBuffer[i];
+		}
+		__asm {
+			xor eax, eax
+			push eax; 7 param - Handle
+			push 128; 6 param - /*FILE_ATTRIBUTE_NORMAL*/
+			push 2; 5 param - /*OPEN_ALWAYS*/
+			push eax; 4 param - Default security
+			push 0x00000002; 3 param - share write
+			push 0x10000000; 2 param - Generic All access
+			push lpFileName; 1 param - FileName
+			call CreateFileA;
+			pushad
+			call GetLastError;
+
+			popad
+			pushad;
+			mov ecx, dataSize;
+			push 0; LPOVERLAPPED
+			push 0; /*NULL if */an asynchronous operation
+			push ecx; maximum number of bytes to be write
+			push aaa; buffer to write
+			push eax; hfile
+			call WriteFile;
+			popad;
+			push eax;
+			call CloseHandle;
+		}
+	});
+
 	add.events().click([&] {//&fm,&datas,&lsbox
 		std::string username;
 		std::string password;
 		inputbox::text user("Username");
 		inputbox::text newkey("Password");
 		inputbox passkey(fm, "Enter your new username and Password ", "New Entry");
-		passkey.verify([&newkey](nana::window handle) {;
+		passkey.verify([&newkey,&user](nana::window handle) {;
 		if (newkey.value().empty()) {
 			msgbox mb(handle, "Invalid Input");
 			mb << L"Passkey is required";
 			mb.show();
 			return false;
 		}
-		return true;
-		});
-		passkey.verify([&user](nana::window handle) {;
 		if (user.value().empty()) {
 			msgbox mb(handle, "Invalid Input");
 			mb << L"Passkey is required";
