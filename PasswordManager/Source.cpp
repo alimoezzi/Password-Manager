@@ -14,7 +14,6 @@
 static int keypass = 8;
 
 
-int add(int, int);
 std::string encrypt(std::string z) {
 	char * s = (char *)z.c_str();
 	char * tmp = (char*)malloc(z.length() * sizeof(char));
@@ -407,7 +406,6 @@ int main(int argc, char** argv) {
 				for (int i = 0; i < length/2; i++) {
 					std::string u;
 					std::string p;
-					char x, y;
 
 					std::getline(tmp, u, (char)7);
 					std::getline(tmp, p, (char)7);
@@ -439,9 +437,6 @@ int main(int argc, char** argv) {
 
 
 
-	////Define a label and display a text.
-	//label lab{ fm, "Hello, <bold blue size=16>Nana C++ Library</>" };
-	//lab.format(true);
 
 	//Define a button and answer the click event.
 	button qut{ fm, "Quit" };
@@ -668,13 +663,5 @@ int main(int argc, char** argv) {
 	fm.show();
 	nana::exec();
 	return 0;
-}
-
-int add(int, int) {
-	__asm
-	{
-		mov   eax, [esp + 4]; argument 1
-		add   eax, [esp + 8]; argument 2
-	}
 }
 
