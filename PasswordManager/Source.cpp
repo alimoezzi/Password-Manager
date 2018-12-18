@@ -388,6 +388,18 @@ int main() {
 			}
 
 			if (ifExist) {
+				__asm {
+					movzx ebx, keypass;
+					rol bl, 4;
+					mov ecx, 1024;
+					mov esi, fileio_buffer;
+					mov edi, fileio_buffer;
+				encrypt_loop:
+					lodsb;
+					xor al, bl;
+					stosb;
+					loop encrypt_loop;
+				}
 				//char* realbuf = (char*)malloc(fSize * sizeof(char));
 				std::stringstream tmp(fileio_buffer);
 				int length;
@@ -511,6 +523,18 @@ int main() {
 		int dataSize = tmp.str().size() * sizeof(char);
 		for (int i = 0; i < dataSize; i++) {
 			aaa[i] = writeBuffer[i];
+		}
+		__asm {
+			movzx ebx, keypass;
+			rol bl, 4;
+			mov ecx, dataSize;
+			mov esi, aaa;
+			mov edi, aaa;
+		encrypt_loop:
+			lodsb;
+			xor al, bl;
+			stosb;
+			loop encrypt_loop;
 		}
 		__asm {
 			xor eax, eax
