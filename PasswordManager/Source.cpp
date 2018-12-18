@@ -289,7 +289,7 @@ struct data {
 	std::basic_string<char> password;
 };
 
-int main() {
+int main(int argc, char** argv) {
 	std::vector<data> datas;
 	std::string fname;
 	form init;
@@ -503,6 +503,22 @@ int main() {
 	button load{ fm, "load" };
 	button key{ fm, "set key" };
 	button save{ fm, "save" };
+
+	load.events().click([&]{
+		#ifdef _WIN32
+				std::string cmd = std::string("start ")+std::string(argv[0]);
+				system(cmd.c_str());
+				std::quick_exit(0);
+		#elif __APPLE__
+					std::string cmd = "open " + resourcePath() + "../../../" + std::string(argv[0]);
+					system(cmd.c_str());
+					std::quick_exit(0);
+		#else
+				std::string cmd = std::string("./") + std::string(argv[0]);
+				system(cmd.c_str());
+				std::quick_exit(0);
+		#endif
+	});
 
 	save.events().click([&] {
 		for (auto i : inline_widget2::checkboxes) {
