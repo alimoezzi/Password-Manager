@@ -74,100 +74,6 @@ using namespace nana;
 //Creates a textbox and button
 //textbox shows the value of the sub item
 //button is used to delete the item.
-class inline_widget : public listbox::inline_notifier_interface {
-private:
-	//Creates inline widget
-	//listbox calls this method to create the widget
-	//The position and size of widget can be ignored in this process
-	virtual void create(window wd) override {
-		//Create listbox
-		txt_.create(wd);
-		txt_.events().click([this] {
-			//Select the item when clicks the textbox
-			indicator_->selected(pos_);
-		});
-
-		txt_.events().mouse_move([this] {
-			//Highlight the item when hovers the textbox
-			indicator_->hovered(pos_);
-		});
-
-		txt_.events().key_char([this](const arg_keyboard& arg) {
-			if (arg.key == keyboard::enter) {
-				//Modify the item when enter is pressed
-				arg.ignore = true;
-				indicator_->modify(pos_, txt_.caption());
-			}
-		});
-		//Or modify the item when typing
-		txt_.events().text_changed([this]() {
-			indicator_->modify(pos_, txt_.caption());
-		});
-		//Create button
-		btn_.create(wd);
-		btn_.caption("Delete");
-		btn_.events().click([this] {
-			//Delete the item when button is clicked
-			auto & lsbox = dynamic_cast<listbox&>(indicator_->host());
-			lsbox.erase(lsbox.at(pos_));
-		});
-
-		btn_.events().mouse_move([this] {
-			//Highlight the item when hovers the button
-			indicator_->hovered(pos_);
-		});
-	}
-
-	//Activates the inline widget, bound to a certain item of the listbox
-	//The inline_indicator is an object to operate the listbox item,
-	//pos is an index object refers to the item of listbox
-	virtual void activate(inline_indicator& ind, index_type pos) {
-		indicator_ = &ind;
-		pos_ = pos;
-	}
-
-	void notify_status(status_type status, bool status_on) override {
-		//Sets focus for the textbox when the item is selected
-		if ((status_type::selecting == status) && status_on)
-			txt_.focus();
-	}
-
-	//Sets the inline widget size
-	//dimension represents the max size can be set
-	//The coordinate of inline widget is a logical coordinate to the sub item of listbox
-	void resize(const size& dimension) override {
-		auto sz = dimension;
-		sz.width -= (sz.width < 50 ? 0 : 50); //Check for avoiding underflow.
-		txt_.size(sz);
-
-		rectangle r(sz.width + 5, 0, 45, sz.height);
-		btn_.move(r);
-		//rectangle t(sz.width, 5, 100, sz.height);
-		//chb_.move(t);
-	}
-
-	//Sets the value of inline widget with the value of the sub item
-	virtual void set(const value_type& value) {
-		//Avoid emitting text_changed to set caption again, otherwise it
-		//causes infinite recursion.
-		if (txt_.caption() != value)
-			txt_.caption(value);
-	}
-
-	//Determines whether to draw the value of sub item
-	//e.g, when the inline widgets covers the whole background of the sub item,
-	//it should return false to avoid listbox useless drawing
-	bool whether_to_draw() const override {
-		return false;
-	}
-public:
-	inline_indicator * indicator_{ nullptr };
-	index_type pos_;
-	textbox txt_;
-	button btn_;
-};
-
-
 class inline_widget2 : public listbox::inline_notifier_interface {
 private:
 	//Creates inline widget
@@ -202,9 +108,7 @@ private:
 		//btn_.check(1);
 		//btn_.caption("Delete");
 		btn_.events().checked([this] {
-			//Delete the item when button is clicked
-			//auto & lsbox = dynamic_cast<listbox&>(indicator_->host());
-			//lsbox.erase(lsbox.at(pos_));
+
 			if (!this->btn_.checked()) { 
 				indicator_->modify(pos_, encrypt(txt_.caption()));
 				txt_.editable(0);
@@ -281,7 +185,102 @@ public:
 	bool en_first = false;
 	static std::vector<checkbox *> checkboxes;
 };
-std::vector<checkbox *> inline_widget2::checkboxes = *new std::vector<checkbox *>();
+
+class inline_widget : public listbox::inline_notifier_interface {
+private:
+	//Creates inline widget
+	//listbox calls this method to create the widget
+	//The position and size of widget can be ignored in this process
+	virtual void create(window wd) override {
+		//Create listbox
+		txt_.create(wd);
+		txt_.events().click([this] {
+			//Select the item when clicks the textbox
+			indicator_->selected(pos_);
+		});
+
+		txt_.events().mouse_move([this] {
+			//Highlight the item when hovers the textbox
+			indicator_->hovered(pos_);
+		});
+
+		txt_.events().key_char([this](const arg_keyboard& arg) {
+			if (arg.key == keyboard::enter) {
+				//Modify the item when enter is pressed
+				arg.ignore = true;
+				indicator_->modify(pos_, txt_.caption());
+			}
+		});
+		//Or modify the item when typing
+		txt_.events().text_changed([this]() {
+			indicator_->modify(pos_, txt_.caption());
+		});
+		//Create button
+		btn_.create(wd);
+		btn_.caption("Delete");
+		btn_.events().click([this] {
+			//Delete the item when button is clicked
+			inline_widget2::checkboxes.pop_back();
+			auto & lsbox = dynamic_cast<listbox&>(indicator_->host());
+			lsbox.erase(lsbox.at(pos_));
+		});
+
+		btn_.events().mouse_move([this] {
+			//Highlight the item when hovers the button
+			indicator_->hovered(pos_);
+		});
+	}
+
+	//Activates the inline widget, bound to a certain item of the listbox
+	//The inline_indicator is an object to operate the listbox item,
+	//pos is an index object refers to the item of listbox
+	virtual void activate(inline_indicator& ind, index_type pos) {
+		indicator_ = &ind;
+		pos_ = pos;
+	}
+
+	void notify_status(status_type status, bool status_on) override {
+		//Sets focus for the textbox when the item is selected
+		if ((status_type::selecting == status) && status_on)
+			txt_.focus();
+	}
+
+	//Sets the inline widget size
+	//dimension represents the max size can be set
+	//The coordinate of inline widget is a logical coordinate to the sub item of listbox
+	void resize(const size& dimension) override {
+		auto sz = dimension;
+		sz.width -= (sz.width < 50 ? 0 : 50); //Check for avoiding underflow.
+		txt_.size(sz);
+
+		rectangle r(sz.width + 5, 0, 45, sz.height);
+		btn_.move(r);
+		//rectangle t(sz.width, 5, 100, sz.height);
+		//chb_.move(t);
+	}
+
+	//Sets the value of inline widget with the value of the sub item
+	virtual void set(const value_type& value) {
+		//Avoid emitting text_changed to set caption again, otherwise it
+		//causes infinite recursion.
+		if (txt_.caption() != value)
+			txt_.caption(value);
+	}
+
+	//Determines whether to draw the value of sub item
+	//e.g, when the inline widgets covers the whole background of the sub item,
+	//it should return false to avoid listbox useless drawing
+	bool whether_to_draw() const override {
+		return false;
+	}
+public:
+	inline_indicator * indicator_{ nullptr };
+	index_type pos_;
+	textbox txt_;
+	button btn_;
+};
+
+std::vector<checkbox *> inline_widget2::checkboxes;//= *new std::vector<checkbox *>();
 
 struct data {
 	std::basic_string<char> username;
@@ -516,8 +515,8 @@ int main(int argc, char** argv) {
 	});
 
 	save.events().click([&] {
-		for (auto i : inline_widget2::checkboxes) {
-			if (i->checked()) {
+		for (int i = 0; i < inline_widget2::checkboxes.size(); i++) {
+			if (inline_widget2::checkboxes[i]->checked()) {
 				msgbox mb(fm, "Error");
 				mb << L"All boxes must be locked before saving";
 				mb.show();
@@ -525,7 +524,7 @@ int main(int argc, char** argv) {
 			}
 		}
 		char * lpFileName = (char*)fname.c_str();
-		char * aaa = new char[datas.size() * 100];
+		char * tmpo = new char[datas.size() * 100];
 		std::stringstream tmp;
 		tmp << (int)datas.size() * 2;
 		char c = 7;
@@ -533,14 +532,14 @@ int main(int argc, char** argv) {
 		auto writeBuffer = tmp.str();
 		int dataSize = tmp.str().size() * sizeof(char);
 		for (int i = 0; i < dataSize; i++) {
-			aaa[i] = writeBuffer[i];
+			tmpo[i] = writeBuffer[i];
 		}
 		__asm {
 			movzx ebx, keypass;
 			rol bl, 4;
 			mov ecx, dataSize;
-			mov esi, aaa;
-			mov edi, aaa;
+			mov esi, tmpo;
+			mov edi, tmpo;
 		encrypt_loop:
 			lodsb;
 			xor al, bl;
@@ -566,7 +565,7 @@ int main(int argc, char** argv) {
 			push 0; LPOVERLAPPED
 			push 0; /*NULL if */an asynchronous operation
 			push ecx; maximum number of bytes to be write
-			push aaa; buffer to write
+			push tmpo; buffer to write
 			push eax; hfile
 			call WriteFile;
 			popad;
@@ -601,8 +600,10 @@ int main(int argc, char** argv) {
 			username = user.value();
 			password = newkey.value();
 		}
-		lsbox.at(0).append({ username,password});
-		lsbox.at(0).back().check(1);
+		if (!username.empty() || !password.empty()) {
+			lsbox.at(0).append({ username,password });
+			lsbox.at(0).back().check(1);
+		}
 		//auto mdg = lsbox.at(0).model();
 		//datas.push_back(data{ "Who", "10000" });
 		//std::cout<<datas.size();
@@ -614,8 +615,8 @@ int main(int argc, char** argv) {
 		inputbox::text pass("Passkey");
 		inputbox passkey(fm, "Please enter a number as your key", "Set pass key");
 		passkey.verify([&pass](nana::window handle) {;
-			for (auto i : inline_widget2::checkboxes) {
-				if (!i->checked()) {
+			for (int i = 0; i < inline_widget2::checkboxes.size(); i++) {
+				if (!inline_widget2::checkboxes[i]->checked()) {
 					msgbox mb(handle, "Error");
 					mb << L"All boxes must be unlocked before modifing passkey";
 					mb.show();
